@@ -15,8 +15,12 @@ int Equal_Channel[MAX_NUMBER_OF_CHANNELS] = [0,0,0,0,0,0];
 int MaxLengths[MAX_NUMBER_OF_CHANNELS] = [3, 3, 3, 3, 3, 3];
 int ChannelErrors[MAX_NUMBER_OF_CHANNELS] = [0, 0, 0, 0, 0, 0];
 int ChannelStatus[MAX_NUMBER_OF_CHANNELS] = [0, 0, 0, 0, 0, 0];
+int Class_Channel[MAX_NUMBER_OF_CHANNELS] = ['g', 'g', 'g', 'g', 'g', 'g'];
+double Mark_Channel[MAX_NUMBER_OF_CHANNELS] = [0,0,0,0,0,0];
+int Time_Channel[MAX_NUMBER_OF_CHANNELS] = [0,0,0,0,0,0];
 double Signal[MAX_NUMBER_OF_CHANNELS][MAX_SIGNAL_LENGTH];
-
+int ModStep[MAX_NUMBER_OF_CHANNELS] = [0,0,0,0,0,0];
+double Dif_Channel[MAX_NUMBER_OF_CHANNELS] = [0,0,0,0,0,0];
 
 int Segmentation_Init()
 {
@@ -31,7 +35,7 @@ int Segmentation_Init()
 
 int Segmentation_AddChannel(char SensorChannel, int Error, int MaxSegLength)
 {
-    if(SensorChannel > MAX_NUMNBER_OF_CHANNELS || SensorChannel < 0)
+    if(SensorChannel > MAX_NUMBER_OF_CHANNELS || SensorChannel < 0)
         return SENSOR_CHANNEL_OUT_OF_RANGE;
     if(ChannelError > MAX_ERROR)
         return CHANNEL_ERROR_OUT_OF_RANGE;
@@ -46,7 +50,7 @@ int Segmentation_AddChannel(char SensorChannel, int Error, int MaxSegLength)
 
 int Segmentation_ModifiyChannelError(char SensorChannel, int NewError)
 {
-    if(SensorChannel > MAX_NUMNBER_OF_CHANNELS || SensorChannel < 0)
+    if(SensorChannel > MAX_NUMBER_OF_CHANNELS || SensorChannel < 0)
         return SENSOR_CHANNEL_OUT_OF_RANGE;
     if(NewError > MAX_ERROR)
         return CHANNEL_ERROR_OUT_OF_RANGE;
@@ -56,7 +60,7 @@ int Segmentation_ModifiyChannelError(char SensorChannel, int NewError)
 
 int Segmentation_ModifyChannelSegLength(char SensorChannel, int NewMaxSegLength)
 {
-    if(SensorChannel > MAX_NUMNBER_OF_CHANNELS || SensorChannel < 0)
+    if(SensorChannel > MAX_NUMBER_OF_CHANNELS || SensorChannel < 0)
         return SENSOR_CHANNEL_OUT_OF_RANGE;
     if(NewMaxSegLength > MAX_LENGTH)
         return MAX_SEGMENT_LENGTH_OUT_OF_RANGE;
@@ -66,31 +70,31 @@ int Segmentation_ModifyChannelSegLength(char SensorChannel, int NewMaxSegLength)
 
 int Segmentation_DisableChannel(char SensorChannel)
 {
-    if(SensorChannel > MAX_NUMNBER_OF_CHANNELS || SensorChannel < 0)
+    if(SensorChannel > MAX_NUMBER_OF_CHANNELS || SensorChannel < 0)
         return SENSOR_CHANNEL_OUT_OF_RANGE;
-    ChannelStatus[SensorChannel] = 0;
+    ChannelStatus[SensorChannel] &= 0xFE;
     return 0;
 }
 
 int Segmentation_EnableChannel(char SensorChannel)
 {
-    if(SensorChannel > MAX_NUMNBER_OF_CHANNELS || SensorChannel < 0)
+    if(SensorChannel > MAX_NUMBER_OF_CHANNELS || SensorChannel < 0)
         return SENSOR_CHANNEL_OUT_OF_RANGE;
-    ChannelStatus[SensorChannel] = 1;
+    ChannelStatus[SensorChannel] ^= 0x01;
     return 0;
 }
 
 
 
-int Segmentation_AddNewData(char SensorChannel, double SensorData)
+int Segmentation_WriteNewData(char SensorChannel, double SensorData)
 {
-    if(SensorChannel > MAX_NUMNBER_OF_CHANNELS || SensorChannel < 0)
+    if(SensorChannel > MAX_NUMBER_OF_CHANNELS || SensorChannel < 0)
         return SENSOR_CHANNEL_OUT_OF_RANGE;
-
-    ModStep[SensorChannel] = K_Channel[SensorChannel] % 2;
+    K = K_Channel[SensorChannel];
+    ModStep[SensorChannel] = K % 2;
 
     //Initial Sample
-    if(K == 0){
+    if(K_Channel[SensorChannel] == 0){
         Signal[SensorChannel][K] = SensorData;
         K_Channel[SensorChannel]++;
         J_Channel[SensorChannel]++;
@@ -107,7 +111,7 @@ int Segmentation_AddNewData(char SensorChannel, double SensorData)
             else
                 Equal_Channel[SensorChannel]++;
 
-            if(K_Channels[SensorChannel]==MaxLengths[SensorChannel]){
+            if(K_Channel[SensorChannel]==MaxLengths[SensorChannel]){
                 if(Signal[SensorChannel][0] = Signal[SensorChannel][K])
                     Class_Channel[SensorChannel] = 'a';
                 else if (Signal[SensorChannel][0] < Signal[SensorChannel])
@@ -123,7 +127,7 @@ int Segmentation_AddNewData(char SensorChannel, double SensorData)
                 Up_Channel[SensorChannel] = 0;
                 Dwn_Channel[SensorChannel] = 0;
                 Equal_Channel[SensorChannel] = 0;
-                Channel_Status[SensorChannel] = 3;  // 3 is Channel enabled and Segment is Ready to be Read.
+                Channel_Status[SensorChannel] ^= 0x1E;  // 3 is Channel enabled and Segment is Ready to be Read.
             }
             else if (abs(Dif_Channel[SensorChannel]) >= ChannelError[SensorChannel]){
                 if(Up_Channel[SensorChannel] > Dwn_Channel[SensorChannel]){
@@ -150,7 +154,7 @@ int Segmentation_AddNewData(char SensorChannel, double SensorData)
                 Up_Channel[SensorChannel] = 0;
                 Dwn_Channel[SensorChannel] = 0;
                 Equal_Channel[SensorChannel] = 0;
-                Channel_Status[SensorChannel] = 3;  // 3 is Channel enabled and Segment is Ready to be Read.
+                Channel_Status[SensorChannel] &= 0x1E;  // 3 is Channel enabled and Segment is Ready to be Read.
             }
 
             else{
@@ -169,21 +173,58 @@ int Segmentation_AddNewData(char SensorChannel, double SensorData)
     }
 
     }
-
+    K_Channel[SensorChannel] = K;
     return 0;
 }
 
-int Segmentation_ReadCurrentSegment(char SensorChannel)
+int Segmentation_ReadSegmentClass(char SensorChannel)
 {
-
-
-    return 0;
+  if(SensorChannel > MAX_NUMBER_OF_CHANNELS || SensorChannel < 0)
+      return SENSOR_CHANNEL_OUT_OF_RANGE;
+  else{
+    if(!(Channel_Status[SensorChannel] & 0x1C))
+      Channel_Status[SensorChannel] &= 0x01;
+    else{
+    Channel_Status[SensorChannel] &= 0xFB;
+    return  Class_Channel[SensorChannel];
+    }
+  }
 }
+
+int Segmentation_ReadSegmentTime(char SensorChannel)
+{
+  if(SensorChannel > MAX_NUMBER_OF_CHANNELS || SensorChannel < 0)
+      return SENSOR_CHANNEL_OUT_OF_RANGE;
+  else{
+    if(!(Channel_Status[SensorChannel] & 0x1C))
+      Channel_Status[SensorChannel] &= 0x01;
+    else{
+    Channel_Status[SensorChannel] &= 0xF7; // 1 Signifies Channel is Enabled and Segment is no longer available
+    return  Time_Channel[SensorChannel];
+    }
+  }
+}
+
+
+double Segmentation_ReadSegmentMark(char SensorChannel)
+{
+  if(SensorChannel > MAX_NUMBER_OF_CHANNELS || SensorChannel < 0)
+      return SENSOR_CHANNEL_OUT_OF_RANGE;
+  else{
+    if(!(Channel_Status[SensorChannel] & 0x1C))
+      Channel_Status[SensorChannel] &= 0x01;
+    else{
+    Channel_Status[SensorChannel] &= 0xEF; // 1 Signifies Channel is Enabled and Segment is no longer available
+    return  Mark_Channel[SensorChannel];
+    }
+  }
+}
+
 
 
 int Segmentation_BeginNewSegment(char SensorChannel)
 {
-    if(SensorChannel > MAX_NUMNBER_OF_CHANNELS || SensorChannel < 0)
+    if(SensorChannel > MAX_NUMBER_OF_CHANNELS || SensorChannel < 0)
         return SENSOR_CHANNEL_OUT_OF_RANGE;
 
     S = 0;
@@ -195,11 +236,3 @@ int Segmentation_BeginNewSegment(char SensorChannel)
 
     return 0;
 }
-
-int Segmentation_SetError(char SensorChannel, double Error)
-{
-
-    return 0;
-}
-
-

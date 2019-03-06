@@ -67,6 +67,25 @@
 //   Built with CCSv4 and IAR Embedded Workbench Version: 4.21
 //******************************************************************************
 
+
+/*
+* Example Uasge
+* #define TempSensor 0
+* Segmentation_Init();
+* Segmentation_AddChannel(TempSensor, 2, 100);
+* Segmentation_EnableChannel(TempSensor);
+* for loop{
+*   if(Segmentation_WriteNewData(NewSensorData)&0x02)
+*    {
+*     SegmentClass = Segmentation_ReadSegmentClass(TempSensor);
+*     SegmentTime = Segmentation_ReadSegmentTime(TempSensor);
+*     SegmentMark = Segmentation_ReadSegmentMark(TempSensor);
+*     Segmentation_BeginNewSegment(TempSensor);
+*     }
+* }
+*/
+
+
 #include <msp430.h>
 
 int main(void)
@@ -107,4 +126,3 @@ void __attribute__ ((interrupt(USCI_A0_VECTOR))) USCI_A0_ISR (void)
   default: break;
   }
 }
-
