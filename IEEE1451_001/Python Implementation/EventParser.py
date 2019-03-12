@@ -2,11 +2,19 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+np.random.seed(19680801)
+
+
+
 dt = 0.001
 t = np.arange(0.0, 10.0, dt)
 s = np.sin(10*t)
+noise = np.random.randn(len(t))
+s = np.convolve(s, .25*noise)[:len(noise)]  # colored noise
 
-EventThreshold = .4
+
+
+EventThreshold = .05
 EventTimes = []
 
 EventFallingEdge = True
